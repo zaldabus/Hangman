@@ -16,8 +16,9 @@ class Hangman
   
   def turn
     @board.display
-    letter_guess = @guesser.guesses_letter
+    letter_guess = @guesser.guesses_letter(@board.board)
     if @board.possible_guesses.include?(letter_guess)
+      puts "Is it #{letter_guess}? Y/N" if @guesser.is_a?(ComputerPlayer)
       if @checker.confirm_guess(letter_guess)
         @checker.marks_guess(@board.board, letter_guess) 
       else
@@ -88,9 +89,9 @@ class HumanPlayer
     pick_word
   end
   
-  def guesses_letter
+  def guesses_letter(board)
     puts "Guess a letter"
-    guess = gets.chomp
+    gets.chomp
   end
   
   def confirm_guess(letter_guess)
@@ -109,7 +110,7 @@ class ComputerPlayer
   attr_accessor :answer
   
   def initialize
-    @guesses = ("a".."z").to_a
+    @guesses = ComputerAI.new
     @answer = pick_word
   end
   
@@ -121,11 +122,10 @@ class ComputerPlayer
     @answer.length
   end
   
-  def guesses_letter
-    guess = @guesses.sample
-    @guesses.delete(guess)
-    puts "Is it #{guess}? Y/N"
-    guess
+  def guesses_letter(board)
+    @guesses.word_length_filter(board.length)
+    @guesses.guessed_word_filter(board)
+    @guesses.highest_freq_letter_filter
   end
   
   def confirm_guess(letter_guess)
@@ -139,5 +139,43 @@ class ComputerPlayer
   
   def show_answer
     puts @answer.split("").join(" ")
+  end
+end
+
+class ComputerAI
+  def initialize
+    @dictionary = File.readlines("dictionary.txt").map(&:chomp)
+    @possible_guesses = ("a".."z").to_a
+  end
+  
+  def word_length_filter(board_length)
+    @dictionary.select! {|word| word.length == board_length}
+  end
+  
+  def guessed_word_filter(board)
+    board.each_with_index do |letter, i|
+      if letter != "_"
+        @dictionary.select! {|word| word.split("")[i] == letter}
+      end
+    end
+    @dictionary
+  end
+  
+  def highest_freq_letter_filter
+    letter_freq = Hash.new(0)
+    
+    @dictionary.each do |word|
+      word.split("").each {|letter| letter_freq[letter] += 1}
+    end
+    
+    letter_count = letter_freq.sort_by {|letter, count| count}
+    letter = letter_count.pop[0]
+    
+    until @possible_guesses.include?(letter)
+      letter = letter_count.pop[0]
+    end
+    
+    @possible_guesses.delete(letter)
+    letter
   end
 end
