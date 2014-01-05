@@ -1,6 +1,4 @@
 class Hangman
-  attr_accessor :guesser, :checker
-  
   def initialize(guesser, checker)
     @guesser, @checker = guesser, checker
     @board = Board.new(@checker.word_length)
@@ -81,17 +79,13 @@ class Board
 end
 
 class HumanPlayer
-  def initialize
-    @answer = pick_word
-  end
-  
   def pick_word
     puts "Enter the length of your word:"
     Integer(gets.chomp)
   end
   
   def word_length
-    @answer
+    pick_word
   end
   
   def guesses_letter
