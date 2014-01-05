@@ -81,7 +81,7 @@ class Board
   end
   
   def won?
-    @board.all? {|letter| letter != "_"}
+    @board == @answer
   end
   
   def show_answer
@@ -101,10 +101,10 @@ end
 
 class ComputerPlayer
   def initialize
-    @words = File.readlines("dictionary.txt").map(&:chomp)
+
   end
   
   def pick_word
-    @words.sample
+    File.readlines("dictionary.txt").map(&:chomp).sample
   end
 end
