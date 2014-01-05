@@ -3,7 +3,7 @@ class Hangman
   
   def initialize(guesser, checker)
     @guesser, @checker = guesser, checker
-    @board = Board.new(checker, checker.word_length)
+    @board = Board.new(@checker.word_length)
     @turns = 8
   end
   
@@ -33,13 +33,13 @@ class Hangman
   end
   
   def winner
-    @checker == ComputerPlayer.new ? @checker.show_answer : @board.display
+    @checker.is_a?(ComputerPlayer) ? @checker.show_answer : @board.display
     puts "Congratulations! You guessed the word!"
     play_again_prompt
   end
   
   def loser
-    @checker == ComputerPlayer.new ? @checker.show_answer : @board.display
+    @checker.is_a?(ComputerPlayer) ? @checker.show_answer : @board.display
     puts "Sorry! You have no guesses left!"
     play_again_prompt
   end 
@@ -48,7 +48,11 @@ class Hangman
     puts "Play again? Y/N"
     users_choice = gets.chomp
     if users_choice.split("").first.upcase == "Y"
-      Hangman.new(@guesser, @checker).play 
+      if @checker.is_a?(ComputerPlayer)
+        Hangman.new(HumanPlayer.new, ComputerPlayer.new).play 
+      else
+        Hangman.new(ComputerPlayer.new, HumanPlayer.new).play
+      end 
     else
       puts "Thank you, have a nice day!"
     end
@@ -58,7 +62,7 @@ end
 class Board
   attr_accessor :possible_guesses, :answer, :board
   
-  def initialize(checker, board_length)
+  def initialize(board_length)
     @board = generate_board(board_length)
     @possible_guesses = ("a".."z").to_a
   end
@@ -77,13 +81,17 @@ class Board
 end
 
 class HumanPlayer
+  def initialize
+    @answer = pick_word
+  end
+  
   def pick_word
     puts "Enter the length of your word:"
-    @length = Integer(gets.chomp)
+    Integer(gets.chomp)
   end
   
   def word_length
-    @length
+    @answer
   end
   
   def guesses_letter
@@ -108,14 +116,15 @@ class ComputerPlayer
   
   def initialize
     @guesses = ("a".."z").to_a
+    @answer = pick_word
   end
   
   def pick_word
-    @answer = File.readlines("dictionary.txt").map(&:chomp).sample
+    File.readlines("dictionary.txt").map(&:chomp).sample
   end
   
   def word_length
-    pick_word.length
+    @answer.length
   end
   
   def guesses_letter
