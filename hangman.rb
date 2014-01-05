@@ -1,9 +1,7 @@
 class Hangman
-  attr_accessor :guesser, :checker
-  
   def initialize(guesser, checker)
     @guesser, @checker = guesser, checker
-    @board = Board.new
+    @board = Board.new(@checker.word_length)
     @turns = 8
   end
   
@@ -18,11 +16,10 @@ class Hangman
   
   def turn
     @board.display
-    puts "Guess a letter"
-    letter_guess = gets.chomp
+    letter_guess = @guesser.guesses_letter
     if @board.possible_guesses.include?(letter_guess)
-      if @board.answer.include?(letter_guess)
-        @board.letter_match(letter_guess) 
+      if @checker.confirm_guess(letter_guess)
+        @checker.marks_guess(@board.board, letter_guess) 
       else
         @turns -= 1
         puts "Sorry! That letter is not included!"
@@ -34,13 +31,13 @@ class Hangman
   end
   
   def winner
-    @board.show_answer
+    @checker.is_a?(ComputerPlayer) ? @checker.show_answer : @board.display
     puts "Congratulations! You guessed the word!"
     play_again_prompt
   end
   
   def loser
-    @board.show_answer
+    @checker.is_a?(ComputerPlayer) ? @checker.show_answer : @board.display
     puts "Sorry! You have no guesses left!"
     play_again_prompt
   end 
@@ -49,7 +46,11 @@ class Hangman
     puts "Play again? Y/N"
     users_choice = gets.chomp
     if users_choice.split("").first.upcase == "Y"
-      Hangman.new(@guesser,ComputerPlayer.new).play 
+      if @checker.is_a?(ComputerPlayer)
+        Hangman.new(HumanPlayer.new, ComputerPlayer.new).play 
+      else
+        Hangman.new(ComputerPlayer.new, HumanPlayer.new).play
+      end 
     else
       puts "Thank you, have a nice day!"
     end
@@ -57,54 +58,86 @@ class Hangman
 end
 
 class Board
-  attr_accessor :possible_guesses, :answer
+  attr_accessor :possible_guesses, :answer, :board
   
-  def initialize
-    @answer = ComputerPlayer.new.pick_word.split("")
-    @board = generate_board
+  def initialize(board_length)
+    @board = generate_board(board_length)
     @possible_guesses = ("a".."z").to_a
   end
   
-  def generate_board
-    @answer.map {"_"}
+  def generate_board(board_length)
+    board_length.times.map {"_"}
   end
   
   def display
     puts @board.join(" ")
   end
   
-  def letter_match(letter_guess)
-    @answer.each_index do |i|
-      @board[i] = letter_guess if @answer[i] == letter_guess
-    end
-    @possible_guesses.delete(letter_guess)
-  end
-  
   def won?
-    @board == @answer
-  end
-  
-  def show_answer
-    puts @answer.join(" ")
+    @board.all? {|space| space != "_"}
   end
 end
 
 class HumanPlayer
-  def initialize
-    
+  def pick_word
+    puts "Enter the length of your word:"
+    Integer(gets.chomp)
   end
   
-  def pick_word
-    
+  def word_length
+    pick_word
+  end
+  
+  def guesses_letter
+    puts "Guess a letter"
+    guess = gets.chomp
+  end
+  
+  def confirm_guess(letter_guess)
+    response = gets.chomp
+    response.split("").first.upcase == "Y" ? true : false
+  end
+  
+  def marks_guess(board, letter_guess)
+    puts "What positions?"
+    positions = gets.chomp.split(",").map {|num| num.to_i.pred}
+    positions.each {|i| board[i] = letter_guess}
   end
 end
 
 class ComputerPlayer
+  attr_accessor :answer
+  
   def initialize
-
+    @guesses = ("a".."z").to_a
+    @answer = pick_word
   end
   
   def pick_word
     File.readlines("dictionary.txt").map(&:chomp).sample
+  end
+  
+  def word_length
+    @answer.length
+  end
+  
+  def guesses_letter
+    guess = @guesses.sample
+    @guesses.delete(guess)
+    puts "Is it #{guess}? Y/N"
+    guess
+  end
+  
+  def confirm_guess(letter_guess)
+    formated_guess = letter_guess.downcase
+    @answer.include?(formated_guess)
+  end
+  
+  def marks_guess(board, letter_guess)
+    board.each_index {|i| board[i] = letter_guess if @answer[i] == letter_guess}
+  end
+  
+  def show_answer
+    puts @answer.split("").join(" ")
   end
 end
